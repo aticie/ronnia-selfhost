@@ -1,0 +1,39 @@
+name: Release Version
+
+on: repository_dispatch
+
+jobs:
+  build_win_x64:
+    runs-on: windows-latest
+    name: Windows x64 Build
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: "3.9.0"
+        architecture: "x64"
+
+    - name: Install dependencies
+      run: |
+        pip install -r ronnia/requirements.txt
+    - name: Install build dependencies
+      run: |
+        pip install -r ronnia/requirements_build.txt
+    - name: Build x64
+      run: |
+        pyinstaller ronnia/main.py --noconfirm --clean --onefile --windowed --icon=ronnia.ico -n ronnia
+        cp config.ini dist/.
+    - name: Upload win-x64 Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: Ronnia win-x64
+        path: dist
+
+    - name: Update Release
+      uses: ncipollo/release-action@v1.6.1
+      with:
+        artifacts: "dist.zip"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        draft: true
+        allowUpdates: true
+        tag: ${{ github.event.client_payload.version }}
