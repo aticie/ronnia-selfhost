@@ -26,8 +26,11 @@ jobs:
           pip install -r ronnia/requirements_build.txt
       - name: Build x64
         run: |
-          pyinstaller ronnia/main.py --noconfirm --clean --onefile --windowed --icon=ronnia.ico -n ronnia
-          cp config.ini dist/.
+          pyinstaller ronnia.spec --noconfirm
+
+      - name: Copy config.ini
+        run: cp config.ini dist/
+
       - name: Upload win-x64 Artifact
         uses: actions/upload-artifact@v2
         with:
@@ -37,7 +40,7 @@ jobs:
       - name: Update Release
         uses: ncipollo/release-action@v1.6.1
         with:
-          artifacts: "dist.zip"
+          artifacts: "ronnia.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           allowUpdates: true
