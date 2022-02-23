@@ -6,7 +6,7 @@ import aiohttp
 
 from ronnia.helpers.logger import RonniaLogger
 
-logger = RonniaLogger('ronnia')
+logger = RonniaLogger(__name__)
 
 
 class OsuApi:
