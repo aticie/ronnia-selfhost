@@ -6,9 +6,12 @@ on:
     types: [ published ]
 
 jobs:
-  build_win_x64:
+  build_win:
     runs-on: windows-latest
-    name: Windows x64 Build
+    strategy:
+        matrix:
+          architecture: [x86, x64]
+    name: Windows ${{ matrix.architecture }} Build
     steps:
       - uses: actions/checkout@v2
         with:
@@ -16,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.9.0"
-          architecture: "x64"
+          architecture: ${{ matrix.architecture }}
 
       - name: Install dependencies
         run: |
@@ -24,7 +27,7 @@ jobs:
       - name: Install build dependencies
         run: |
           pip install -r ronnia/requirements_build.txt
-      - name: Build x64
+      - name: Build ${{ matrix.architecture }}
         run: |
           pyinstaller ronnia.spec --noconfirm
 
@@ -34,47 +37,7 @@ jobs:
       - name: Update Release
         uses: ncipollo/release-action@v1.9.0
         with:
-          artifacts: "ronnia_win_x64.zip"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          name: ${{ github.event.release.tag_name }}
-          body: |
-            <details>
-              <summary>Release Notes</summary>
-              <p>
-                ${{ github.event.release.body }}
-              </p>
-            </details>
-
-  build_win_x86:
-    runs-on: windows-latest
-    name: Windows x86 Build
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.release.tag_name }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.9.0"
-          architecture: "x86"
-
-      - name: Install dependencies
-        run: |
-          pip install -r ronnia/requirements.txt
-      - name: Install build dependencies
-        run: |
-          pip install -r ronnia/requirements_build.txt
-      - name: Build x86
-        run: |
-          pyinstaller ronnia.spec --noconfirm
-
-      - name: Copy config.ini
-        run: cp config.ini dist/
-
-      - name: Update Release
-        uses: ncipollo/release-action@v1.9.0
-        with:
-          artifacts: "ronnia_win_x86.zip"
+          artifacts: ronnia_win_${{ matrix.architecture }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           name: ${{ github.event.release.tag_name }}
