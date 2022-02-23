@@ -39,7 +39,7 @@ class TwitchBot(commands.Bot, ABC):
         logger.debug(f'Sending args to super().__init__: {args}')
         super().__init__(**args)
 
-        self.irc_bot = IrcBot("#osu", self.settings.osu_username, "irc.ppy.sh",
+        self.irc_bot = IrcBot(self.settings.osu_username, "irc.ppy.sh",
                               password=self.settings.osu_irc_password)
         self.irc_bot_thread = Thread(target=self.irc_bot.start)
 
