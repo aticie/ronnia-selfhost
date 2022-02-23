@@ -3,7 +3,6 @@ from abc import ABC
 from threading import Thread
 from typing import AnyStr, Tuple, Union
 
-import twitchio
 from twitchio import Message, Chatter
 from twitchio.ext import commands
 
@@ -28,22 +27,20 @@ class TwitchBot(commands.Bot, ABC):
 
     def __init__(self):
         self.main_prefix = None
-        self.osu_api = OsuApi()
         self.settings = Settings()
-        self.config = self.settings.config['TWITCH']
-        self.osu_config = self.settings.config['OSU']
+        self.osu_api = OsuApi(self.settings.osu_api_key)
 
         args = {
-            'token': self.config['tmi-token'],
-            'client_secret': self.config['client-secret'],
-            'prefix': self.config['command-prefix'],
-            'initial_channels': [self.config['username']]
+            'token': self.settings.twitch_tmi_token,
+            'client_secret': self.settings.twitch_client_secret,
+            'prefix': self.settings.twitch_command_prefix,
+            'initial_channels': [self.settings.twitch_username]
         }
         logger.debug(f'Sending args to super().__init__: {args}')
         super().__init__(**args)
 
-        self.irc_bot = IrcBot("#osu", self.osu_config['username'], "irc.ppy.sh",
-                              password=self.osu_config["irc-password"])
+        self.irc_bot = IrcBot("#osu", self.settings.osu_username, "irc.ppy.sh",
+                              password=self.settings.osu_irc_password)
         self.irc_bot_thread = Thread(target=self.irc_bot.start)
 
         self.prefix = None
@@ -69,7 +66,7 @@ class TwitchBot(commands.Bot, ABC):
             if beatmap_info:
                 await self.check_request_criteria(message, beatmap_info)
                 # If user has enabled echo setting, send twitch chat a message
-                if self.config['feedback']:
+                if self.settings.feedback:
                     await self._send_twitch_message(message, beatmap_info)
 
                 await self._send_beatmap_to_irc(message, beatmap_info, given_mods)
@@ -77,7 +74,7 @@ class TwitchBot(commands.Bot, ABC):
     async def check_beatmap_star_rating(self, message: Message, beatmap_info):
         requester_name = message.author.name
         diff_rating = float(beatmap_info['difficultyrating'])
-        range_low, range_high = self.config['star-rating']
+        range_low, range_high = self.settings.star_rating
 
         if range_low == -1 or range_high == -1:
             return
@@ -101,19 +98,17 @@ class TwitchBot(commands.Bot, ABC):
             raise AssertionError
 
     async def check_user_excluded(self, message: Message):
-        excluded_users_txt = self.config['excluded-users']
-        excluded_users = [user.strip() for user in excluded_users_txt.split(',')]
-        assert message.author.name.lower() not in excluded_users, f'{message.author.name} is excluded'
+        assert message.author.name.lower() not in self.settings.excluded_users, f'{message.author.name} is excluded'
 
     async def check_sub_only_mode(self, message: Message):
-        is_sub_only = self.config['sub-only']
+        is_sub_only = self.settings.sub_only
         if is_sub_only:
             assert message.author.is_mod or message.author.is_subscriber != '0' or 'vip' in message.author.badges, \
                 'Subscriber only request mode is active.'
 
     async def check_channel_points_only_mode(self, message):
-        is_cp_only = self.config['channel-points-only']
-        if is_cp_only:
+        channel_points_only = self.settings.channel_points_only
+        if channel_points_only:
             assert 'custom-reward-id' in message.tags, 'Channel Points only mode is active.'
         return
 
@@ -123,7 +118,7 @@ class TwitchBot(commands.Bot, ABC):
 
     async def check_if_author_is_broadcaster(self, message: Message):
 
-        if not self.config['listen-to-self-message']:
+        if not self.settings.listen_to_self_message:
             assert message.author.name != message.channel.name, 'Author is broadcaster and not in test mode.'
 
         return
@@ -176,7 +171,7 @@ class TwitchBot(commands.Bot, ABC):
         :return:
         """
         irc_message = await self._prepare_irc_message(message, beatmap_info, given_mods)
-        await self._send_irc_message(irc_message, self.osu_config['Username'])
+        await self._send_irc_message(irc_message, self.settings.osu_username)
 
         return
 
@@ -233,20 +228,16 @@ class TwitchBot(commands.Bot, ABC):
         difficultyrating = float(beatmap_info['difficultyrating'])
         beatmap_id = beatmap_info['beatmap_id']
         beatmap_length = convert_seconds_to_readable(beatmap_info['hit_length'])
-        beatmap_info = f"[http://osu.ppy.sh/b/{beatmap_id} {artist} - {title} [{version}]] ({bpm} BPM, {difficultyrating:.2f}*, {beatmap_length}) {given_mods}"
+        beatmap_info = f"[https://osu.ppy.sh/b/{beatmap_id} {artist} - {title} [{version}]] " \
+                       f"({bpm} BPM, {difficultyrating:.2f}*, {beatmap_length}) {given_mods}"
         extra_postfix = ""
         extra_prefix = ""
 
-        # TODO: Check if this issue is fixed in next twitchio
-        try:
-            badges = message.author.badges
-        except ValueError:
-            badges = []
+        badges = message.author.badges
 
         if message.author.is_mod:
             extra_prefix += "[MOD] "
-        elif message.author.is_subscriber != '0':
-            # TODO: Check if this conditional changed in the next releases of tio
+        elif message.author.is_subscriber:
             extra_prefix += "[SUB] "
         elif 'vip' in badges:
             extra_prefix += "[VIP] "
@@ -265,4 +256,4 @@ class TwitchBot(commands.Bot, ABC):
             self.load_module(extension)
             logger.debug(f'Successfully loaded: {extension}')
 
-        logger.info(f'Ready | {self.nick}')
+        logger.info(f'Started the request bot as: {self.nick}')

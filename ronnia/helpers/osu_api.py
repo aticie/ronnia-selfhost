@@ -1,18 +1,18 @@
 import asyncio
 import datetime
-import logging
-import os
 from typing import Union
 
 import aiohttp
 
-logger = logging.getLogger('ronnia')
+from ronnia.helpers.logger import RonniaLogger
+
+logger = RonniaLogger('ronnia')
 
 
 class OsuApi:
 
-    def __init__(self):
-        self._osu_api_key = os.getenv('OSU_API_KEY')
+    def __init__(self, api_key: str):
+        self._osu_api_key = api_key
         self._last_request_time = datetime.datetime.now() - datetime.timedelta(seconds=100)
         self._cooldown_seconds = 1
 
