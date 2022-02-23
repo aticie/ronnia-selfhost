@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import shutil
+import platform
 
 block_cipher = None
 
@@ -39,4 +40,7 @@ exe = EXE(pyz,
           codesign_identity=None,
           entitlements_file=None , icon='ronnia.ico')
 
-shutil.make_archive('ronnia', 'zip', 'dist')
+if platform.architecture()[0] == '64bit':
+    shutil.make_archive('ronnia_win_x64', 'zip', 'dist')
+else:
+    shutil.make_archive('ronnia_win_x86', 'zip', 'dist')
