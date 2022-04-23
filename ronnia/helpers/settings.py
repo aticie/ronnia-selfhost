@@ -24,7 +24,8 @@ class Settings:
 
             self.config['OSU'] = {'api-key': '',
                                   'username': '',
-                                  'irc-password': ''}
+                                  'irc-password': '',
+                                  'irc-server-address': 'irc.ppy.sh'}
 
             self.save()
 
@@ -46,6 +47,8 @@ class Settings:
         self.osu_api_key = self.config.get('OSU', 'api-key')
         self.osu_username = self.config.get('OSU', 'username')
         self.osu_irc_password = self.config.get('OSU', 'irc-password')
+        self.osu_irc_server_address\
+            = self.config.get('OSU', 'irc-server-address')
 
     def save(self):
         with open(self.config_file, 'w') as configfile:
